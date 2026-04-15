@@ -1,1 +1,1 @@
-[Downlaod](https://github.com/wichelberg/Second-Implementation-Data-Vis/releases/download/exe/second_Implementation.exe)
+Second Implementation exe [downlaod](https://github.com/wichelberg/Second-Implementation-Data-Vis/releases/download/exe/second_Implementation.exe)
