@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Orbital Graveyard Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #1a1a2e; color: white; margin: 0; padding: 16px; }
+    h1 { text-align: center; color: #e0e0ff; font-size: 18px; margin-bottom: 16px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; gap: 12px; }
+    .chart { background: #16213e; border-radius: 8px; padding: 10px; }
+    .chart-title { color: #a0c4ff; font-size: 13px; margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <h1>UCS Satellite Database  Orbital Archaeology Dashboard</h1>
+<div class="grid">
+  <div class="chart">
+    <div class="chart-title">Legacy of Use (Satellite Sectors)</div>
+    <div id="pie"></div>
+  </div>
+
+  <div class="chart">
+    <div class="chart-title">R1 — Active & Inactive Objects by Country</div>
+    <div id="bar"></div>
+  </div>
+
+  <div class="chart">
+    <div class="chart-title">R3 — Orbital Altitude Density (Click to Filter)</div>
+    <div id="hist"></div>
+  </div>
+
+  <div class="chart">
+    <div class="chart-title">R4 — Launch Mass vs Expected Lifetime</div>
+    <div id="scatter"></div>
+  </div>
+</div>
+<script>
+const DATA_URL = "ucs_data.csv";
+
+// ── BAR CHART (R1) ──────────────────────────────────
+const barSpec = {
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "data": { "url": DATA_URL },
+  "transform": [
+    { "filter": "datum['Satellite Status'] == 'Active' || datum['Satellite Status'] == 'Inactive' || datum['Satellite Status'] == 'Inactive (Archaeology)'" },
+    { "calculate": "datum['Satellite Status'] == 'Inactive (Archaeology)' ? 'Inactive' : datum['Satellite Status']", "as": "Status" },
+    { "aggregate": [{ "op": "count", "as": "count" }], "groupby": ["Country of Operator/Owner", "Status"] },
+    { "window": [{ "op": "sum", "field": "count", "as": "total" }], "groupby": ["Country of Operator/Owner"] },
+    { "filter": "datum.total > 10" },
+    { "window": [{ "op": "rank", "as": "rank" }], "sort": [{ "field": "total", "order": "descending" }] },
+    { "filter": "datum.rank <= 15" }
+  ],
+  "mark": "bar",
+  "encoding": {
+    "x": { 
+      "field": "Country of Operator/Owner", 
+      "type": "nominal", 
+      // "y" yaparak küçükten büyüğe sıraladık, böylece en büyük olan USA en sağa geçti.
+      "sort": "y", 
+      "title": "Country",
+      "axis": { "labelAngle": -45 }
+    },
+    "y": { 
+      "field": "count", 
+      "type": "quantitative", 
+      "title": "Satellite Count" 
+    },
+    "color": {
+      "field": "Status", "type": "nominal",
+      "scale": { "domain": ["Active", "Inactive"], "range": ["#4caf50", "#f44336"] }
+    },
+    "tooltip": [
+      { "field": "Country of Operator/Owner" },
+      { "field": "Status" },
+      { "field": "count", "title": "Count" }
+    ]
+  },
+  "width": 550, "height": 320
+};
+
+// ── SCATTER PLOT (R2) ───────────────────────────────
+const scatterSpec = {
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "data": { "url": DATA_URL },
+  "width": 650,
+  "height": 250,
+  "transform": [
+    // Veri temizliği ve sayıya dönüştürme
+    { "filter": "datum['Launch Mass (kg.)'] > 0 && datum['Expected Lifetime (yrs.)'] > 0" },
+    { "calculate": "toNumber(datum['Launch Mass (kg.)'])", "as": "Mass" },
+    { "calculate": "toNumber(datum['Expected Lifetime (yrs.)'])", "as": "Lifetime" }
+  ],
+  "layer": [
+    {
+      // KATMAN 1: NOKTALAR (Hepsi Mavi ve Sade)
+      "mark": { 
+        "type": "point", 
+        "opacity": 0.4, 
+        "size": 35, 
+        "filled": true,
+        "color": "#4C78A8" // Klasik Tableau Mavisi
+      },
+      "encoding": {
+        "x": { 
+          "field": "Mass", 
+          "type": "quantitative", 
+          "scale": { 
+            "type": "linear", 
+            "domain": [0, 24000] 
+          },
+          "title": "Launch Mass (kg)",
+          "axis": { "tickCount": 6, "grid": true }
+        },
+        "y": { 
+          "field": "Lifetime", 
+          "type": "quantitative", 
+          "title": "Expected Lifetime (yrs)",
+          "scale": { "domain": [0, 32] }
+        },
+        // Jitter: Dikey çizgileri engellemek için hafif dağıtma
+        "xOffset": { "shorthand": "random()", "type": "quantitative" },
+        "yOffset": { "shorthand": "random()", "type": "quantitative" },
+        // "color" kısmını sildik, böylece kategori yazıları gitti.
+        "tooltip": [
+          { "field": "Current Official Name of Satellite", "title": "Satellite" },
+          { "field": "Mass", "title": "Mass (kg)" },
+          { "field": "Lifetime", "title": "Lifetime (yrs)" }
+        ]
+      }
+    },
+    {
+      // KATMAN 2: REGRESYON ÇİZGİSİ
+      "mark": { "type": "line", "color": "#E15759", "size": 3 }, // Hafif Tableau Kırmızısı
+      "transform": [
+        { "regression": "Lifetime", "on": "Mass" }
+      ],
+      "encoding": {
+        "x": { "field": "Mass", "type": "quantitative" },
+        "y": { "field": "Lifetime", "type": "quantitative" }
+      }
+    }
+  ],
+  "config": {
+    "view": { "stroke": "transparent" }
+  }
+};
+
+// ── HISTOGRAM (R3 Entry Point) ──────────────────────
+const histSpec = {
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "data": { "url": DATA_URL },
+  "width": 650,
+  "height": 280,
+  "mark": { "type": "bar", "color": "#4CC9F0" },
+  "encoding": {
+    "x": {
+      "field": "Perigee (km)",
+      "type": "quantitative",
+      "bin": {
+        "step": 1000,      // Her bar 1000 birim genişliğinde olsun
+        "extent": [500, 40000] // 500'den başla, sona kadar git
+      },
+      "title": "Altitude (Perigee km)",
+      "axis": {
+        "values": [500, 5500, 10500, 15500, 20500, 25500, 30500, 35500] // Eksen etiketlerini netleştirir
+      }
+    },
+    "y": {
+      "aggregate": "count",
+      "type": "quantitative",
+      "title": "Satellite Count"
+    },
+    "tooltip": [
+      { "field": "Perigee (km)", "bin": true, "title": "Altitude Range" },
+      { "aggregate": "count", "title": "Count" }
+    ]
+  }
+};
+
+// ── PIE CHART (R3 Supporting) ───────────────────────
+const pieSpec = {
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "data": { "url": DATA_URL },
+  "transform": [
+    {
+      "calculate": "indexof(['Civil', 'Military', 'Commercial', 'Government'], datum['Users']) >= 0 ? datum['Users'] : (indexof(datum['Users'], 'Military') >= 0 ? 'Military' : (indexof(datum['Users'], 'Commercial') >= 0 ? 'Commercial' : (indexof(datum['Users'], 'Civil') >= 0 ? 'Civil' : 'Government')))",
+      "as": "Users_group"
+    }
+  ],
+  "mark": { "type": "arc", "innerRadius": 50 },
+  "encoding": {
+    "theta": { "aggregate": "count", "type": "quantitative" },
+    "color": { "field": "Users_group", "type": "nominal" },
+    "tooltip": [
+      { "field": "Users_group", "title": "Sector" },
+      { "aggregate": "count", "title": "Count" }
+    ]
+  },
+  "width": 600, "height": 400
+};
+
+// Embed all
+vegaEmbed('#bar', barSpec, { theme: 'dark', actions: false });
+vegaEmbed('#scatter', scatterSpec, { theme: 'dark', actions: false });
+vegaEmbed('#hist', histSpec, { theme: 'dark', actions: false });
+vegaEmbed('#pie', pieSpec, { theme: 'dark', actions: false });
+</script>
+</body>
+</html>
