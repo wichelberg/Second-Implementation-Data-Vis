@@ -57,7 +57,6 @@ const barSpec = {
     "x": { 
       "field": "Country of Operator/Owner", 
       "type": "nominal", 
-      // "y" yaparak küçükten büyüğe sıraladık, böylece en büyük olan USA en sağa geçti.
       "sort": "y", 
       "title": "Country",
       "axis": { "labelAngle": -45 }
@@ -87,20 +86,18 @@ const scatterSpec = {
   "width": 650,
   "height": 250,
   "transform": [
-    // Veri temizliği ve sayıya dönüştürme
     { "filter": "datum['Launch Mass (kg.)'] > 0 && datum['Expected Lifetime (yrs.)'] > 0" },
     { "calculate": "toNumber(datum['Launch Mass (kg.)'])", "as": "Mass" },
     { "calculate": "toNumber(datum['Expected Lifetime (yrs.)'])", "as": "Lifetime" }
   ],
   "layer": [
     {
-      // KATMAN 1: NOKTALAR (Hepsi Mavi ve Sade)
       "mark": { 
         "type": "point", 
         "opacity": 0.4, 
         "size": 35, 
         "filled": true,
-        "color": "#4C78A8" // Klasik Tableau Mavisi
+        "color": "#4C78A8"    
       },
       "encoding": {
         "x": { 
@@ -119,10 +116,8 @@ const scatterSpec = {
           "title": "Expected Lifetime (yrs)",
           "scale": { "domain": [0, 32] }
         },
-        // Jitter: Dikey çizgileri engellemek için hafif dağıtma
         "xOffset": { "shorthand": "random()", "type": "quantitative" },
         "yOffset": { "shorthand": "random()", "type": "quantitative" },
-        // "color" kısmını sildik, böylece kategori yazıları gitti.
         "tooltip": [
           { "field": "Current Official Name of Satellite", "title": "Satellite" },
           { "field": "Mass", "title": "Mass (kg)" },
@@ -132,7 +127,7 @@ const scatterSpec = {
     },
     {
       // KATMAN 2: REGRESYON ÇİZGİSİ
-      "mark": { "type": "line", "color": "#E15759", "size": 3 }, // Hafif Tableau Kırmızısı
+      "mark": { "type": "line", "color": "#E15759", "size": 3 }, 
       "transform": [
         { "regression": "Lifetime", "on": "Mass" }
       ],
@@ -159,12 +154,12 @@ const histSpec = {
       "field": "Perigee (km)",
       "type": "quantitative",
       "bin": {
-        "step": 1000,      // Her bar 1000 birim genişliğinde olsun
-        "extent": [500, 40000] // 500'den başla, sona kadar git
+        "step": 1000,      
+        "extent": [500, 40000] 
       },
       "title": "Altitude (Perigee km)",
       "axis": {
-        "values": [500, 5500, 10500, 15500, 20500, 25500, 30500, 35500] // Eksen etiketlerini netleştirir
+        "values": [500, 5500, 10500, 15500, 20500, 25500, 30500, 35500] 
       }
     },
     "y": {

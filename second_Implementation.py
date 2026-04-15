@@ -5,15 +5,14 @@ import http.server
 import socketserver
 import time
 
-# Configuration
-PORT = 8080  # Portu 8080 yaparak çakışma ihtimalini azaltıyoruz
+
+PORT = 8080 
 FILENAME = "index.html"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 URL = f"http://localhost:{PORT}/{FILENAME}"
 
 class CustomHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
-        # Sunucunun KÖK dizinini zorla bu scriptin olduğu yer yapıyoruz
         super().__init__(*args, directory=BASE_DIR, **kwargs)
 
 def start_server():
@@ -31,7 +30,6 @@ if __name__ == "__main__":
     server_thread.daemon = True
     server_thread.start()
 
-    # 2. Sunucunun hazır olması için kısa bir bekleme
     time.sleep(1.5)
 
     # 3. UI Penceresini aç
