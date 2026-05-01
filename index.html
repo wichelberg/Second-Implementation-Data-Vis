@@ -1,206 +1,483 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Orbital Graveyard Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
   <style>
-    body { font-family: Arial, sans-serif; background: #1a1a2e; color: white; margin: 0; padding: 16px; }
-    h1 { text-align: center; color: #e0e0ff; font-size: 18px; margin-bottom: 16px; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; gap: 12px; }
-    .chart { background: #16213e; border-radius: 8px; padding: 10px; }
-    .chart-title { color: #a0c4ff; font-size: 13px; margin-bottom: 6px; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: #1a1a2e;
+      color: white;
+    }
+
+    #topbar {
+      height: 36px;
+      background: #0f0f23;
+      border-bottom: 1px solid #2a2a4e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    #topbar h1 { color: #e0e0ff; font-size: 15px; font-weight: bold; }
+
+    #layout {
+      display: flex;
+      height: calc(100vh - 36px);
+      overflow: hidden;
+    }
+
+    #sidebar {
+      width: 180px;
+      min-width: 180px;
+      background: #12122a;
+      border-right: 1px solid #2a2a4e;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 10px 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 13px;
+    }
+    #sidebar::-webkit-scrollbar { width: 3px; }
+    #sidebar::-webkit-scrollbar-thumb { background: #2a2a6e; border-radius: 3px; }
+
+    .fg { display: flex; flex-direction: column; gap: 4px; }
+    .fl {
+      color: #a0c4ff; font-size: 10px; font-weight: bold;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      border-bottom: 1px solid #2a2a4e; padding-bottom: 3px;
+    }
+    .ci {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; color: #c8d8f0; cursor: pointer;
+      padding: 1px 0; user-select: none;
+    }
+    .ci input[type="checkbox"] { accent-color: #4C78A8; width: 12px; height: 12px; cursor: pointer; }
+    .ci:hover { color: #fff; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+    .rw { display: flex; flex-direction: column; gap: 2px; }
+    .rl { display: flex; justify-content: space-between; font-size: 9px; color: #708090; }
+    .rv { text-align: center; font-size: 10px; color: #a0c4ff; font-weight: bold; }
+    input[type="range"] { width: 100%; accent-color: #4C78A8; cursor: pointer; height: 16px; }
+
+    .rbtn {
+      background: #1e2a4a; color: #a0c4ff;
+      border: 1px solid #2a3a6a; border-radius: 4px;
+      padding: 6px; font-size: 10px; cursor: pointer;
+      transition: background 0.15s; margin-top: 2px;
+    }
+    .rbtn:hover { background: #2a3a6a; color: #fff; }
+
+    #main {
+      flex: 1;
+      overflow: hidden;
+      padding: 8px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 0px;
+    }
+
+    .chart {
+      background: #16213e;
+      border-radius: 7px;
+      padding: 7px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .ct { color: #a0c4ff; font-size: 11px; margin-bottom: 4px; flex-shrink: 0; }
+    .cv { flex: 1; overflow: hidden; }
+
+    #loading {
+      position: fixed; inset: 0;
+      background: rgba(26,26,46,0.96);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 10px; z-index: 999;
+      font-size: 14px; color: #a0c4ff;
+    }
+    #lerr { color: #f44336; font-size: 12px; display: none; max-width: 340px; text-align: center; }
+    .sp {
+      width: 32px; height: 32px;
+      border: 3px solid #2a2a6e; border-top-color: #4C78A8;
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
-  <h1>UCS Satellite Database  Orbital Archaeology Dashboard</h1>
-<div class="grid">
-  <div class="chart">
-    <div class="chart-title">Legacy of Use (Satellite Sectors)</div>
-    <div id="pie"></div>
-  </div>
 
-  <div class="chart">
-    <div class="chart-title">R1 — Active & Inactive Objects by Country</div>
-    <div id="bar"></div>
-  </div>
+<div id="loading"><div class="sp"></div><span>Loading satellite data...</span><span id="lerr"></span></div>
 
-  <div class="chart">
-    <div class="chart-title">R3 — Orbital Altitude Density (Click to Filter)</div>
-    <div id="hist"></div>
-  </div>
+<div id="topbar"><h1>UCS Satellite Database &mdash; Orbital Archaeology Dashboard</h1></div>
 
-  <div class="chart">
-    <div class="chart-title">R4 — Launch Mass vs Expected Lifetime</div>
-    <div id="scatter"></div>
-  </div>
+<div id="layout">
+
+  <aside id="sidebar">
+
+    <div class="fg">
+      <div class="fl">Satellite Status</div>
+      <label class="ci"><input type="checkbox" id="st-all" checked> (All)</label>
+      <label class="ci"><span class="dot" style="background:#4caf50"></span><input type="checkbox" id="st-active" checked> Active</label>
+      <label class="ci"><span class="dot" style="background:#f44336"></span><input type="checkbox" id="st-inactive" checked> Inactive</label>
+    </div>
+
+    <div class="fg">
+      <div class="fl">Users (group)</div>
+      <label class="ci"><input type="checkbox" id="ug-all" checked> (All)</label>
+      <label class="ci"><input type="checkbox" id="ug-civil" checked> Civil</label>
+      <label class="ci"><input type="checkbox" id="ug-commercial" checked> Commercial</label>
+      <label class="ci"><input type="checkbox" id="ug-government" checked> Government</label>
+      <label class="ci"><input type="checkbox" id="ug-military" checked> Military</label>
+    </div>
+
+    <div class="fg">
+      <div class="fl">Launch Mass (kg.)</div>
+      <div class="rw">
+        <div class="rl"><span>1</span><span>22500</span></div>
+        <div class="rv" id="mass-val">1 - 22500</div>
+        <input type="range" id="mass-min" min="1" max="22500" value="1" step="50">
+        <input type="range" id="mass-max" min="1" max="22500" value="22500" step="50">
+      </div>
+    </div>
+
+    <div class="fg">
+      <div class="fl">Expected Lifetime (yrs.)</div>
+      <div class="rw">
+        <div class="rl"><span>0.25</span><span>30</span></div>
+        <div class="rv" id="life-val">0.25 - 30.00</div>
+        <input type="range" id="life-min" min="0.25" max="30" value="0.25" step="0.25">
+        <input type="range" id="life-max" min="0.25" max="30" value="30" step="0.25">
+      </div>
+    </div>
+
+    <div class="fg">
+      <div class="fl">Perigee (km)</div>
+      <div class="rw">
+        <div class="rl"><span>170</span><span>37782</span></div>
+        <div class="rv" id="perigee-val">170 - 37782</div>
+        <input type="range" id="perigee-min" min="170" max="37782" value="170" step="100">
+        <input type="range" id="perigee-max" min="170" max="37782" value="37782" step="100">
+      </div>
+    </div>
+
+    <div class="fg">
+      <div class="fl">Class of Orbit</div>
+      <label class="ci"><input type="checkbox" id="orb-all" checked> (All)</label>
+      <label class="ci"><input type="checkbox" id="orb-elliptical" checked> Elliptical</label>
+      <label class="ci"><input type="checkbox" id="orb-geo" checked> GEO</label>
+      <label class="ci"><input type="checkbox" id="orb-leo" checked> LEO</label>
+      <label class="ci"><input type="checkbox" id="orb-meo" checked> MEO</label>
+    </div>
+
+    <button class="rbtn" id="reset-btn">&#8635; Reset All Filters</button>
+  </aside>
+
+  <main id="main">
+    <div class="chart">
+      <div class="ct">Legacy of Use (Satellite Sectors)</div>
+      <div class="cv" id="pie"></div>
+    </div>
+    <div class="chart">
+      <div class="ct">R1 &mdash; Active &amp; Inactive Objects by Country</div>
+      <div class="cv" id="bar"></div>
+    </div>
+    <div class="chart">
+      <div class="ct">R3 &mdash; Orbital Altitude Density</div>
+      <div class="cv" id="hist"></div>
+    </div>
+    <div class="chart">
+      <div class="ct">R4 &mdash; Launch Mass vs Expected Lifetime</div>
+      <div class="cv" id="scatter"></div>
+    </div>
+  </main>
+
 </div>
+
 <script>
-const DATA_URL = "ucs_data.csv";
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/);
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const vals = []; let cur = '', inQ = false;
+    for (let c = 0; c < lines[i].length; c++) {
+      const ch = lines[i][c];
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { vals.push(cur.trim()); cur = ''; }
+      else cur += ch;
+    }
+    vals.push(cur.trim());
+    const obj = {};
+    headers.forEach((h, idx) => {
+      const v = vals[idx] !== undefined ? vals[idx] : '';
+      const n = parseFloat(v);
+      obj[h] = (v !== '' && !isNaN(n)) ? n : v;
+    });
+    rows.push(obj);
+  }
+  return rows;
+}
 
-// ── BAR CHART (R1) ──────────────────────────────────
-const barSpec = {
-  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-  "data": { "url": DATA_URL },
-  "transform": [
-    { "filter": "datum['Satellite Status'] == 'Active' || datum['Satellite Status'] == 'Inactive' || datum['Satellite Status'] == 'Inactive (Archaeology)'" },
-    { "calculate": "datum['Satellite Status'] == 'Inactive (Archaeology)' ? 'Inactive' : datum['Satellite Status']", "as": "Status" },
-    { "aggregate": [{ "op": "count", "as": "count" }], "groupby": ["Country of Operator/Owner", "Status"] },
-    { "window": [{ "op": "sum", "field": "count", "as": "total" }], "groupby": ["Country of Operator/Owner"] },
-    { "filter": "datum.total > 10" },
-    { "window": [{ "op": "rank", "as": "rank" }], "sort": [{ "field": "total", "order": "descending" }] },
-    { "filter": "datum.rank <= 15" }
-  ],
-  "mark": "bar",
-  "encoding": {
-    "x": { 
-      "field": "Country of Operator/Owner", 
-      "type": "nominal", 
-      "sort": "y", 
-      "title": "Country",
-      "axis": { "labelAngle": -45 }
-    },
-    "y": { 
-      "field": "count", 
-      "type": "quantitative", 
-      "title": "Satellite Count" 
-    },
-    "color": {
-      "field": "Status", "type": "nominal",
-      "scale": { "domain": ["Active", "Inactive"], "range": ["#4caf50", "#f44336"] }
-    },
-    "tooltip": [
-      { "field": "Country of Operator/Owner" },
-      { "field": "Status" },
-      { "field": "count", "title": "Count" }
-    ]
-  },
-  "width": 550, "height": 320
-};
+function normUsers(u) {
+  const l = String(u || '').toLowerCase();
+  if (l.includes('military'))   return 'Military';
+  if (l.includes('commercial')) return 'Commercial';
+  if (l.includes('civil'))      return 'Civil';
+  return 'Government';
+}
+function normStatus(s) { return s === 'Active' ? 'Active' : 'Inactive'; }
 
-// ── SCATTER PLOT (R2) ───────────────────────────────
-const scatterSpec = {
-  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-  "data": { "url": DATA_URL },
-  "width": 650,
-  "height": 250,
-  "transform": [
-    { "filter": "datum['Launch Mass (kg.)'] > 0 && datum['Expected Lifetime (yrs.)'] > 0" },
-    { "calculate": "toNumber(datum['Launch Mass (kg.)'])", "as": "Mass" },
-    { "calculate": "toNumber(datum['Expected Lifetime (yrs.)'])", "as": "Lifetime" }
-  ],
-  "layer": [
-    {
-      "mark": { 
-        "type": "point", 
-        "opacity": 0.4, 
-        "size": 35, 
-        "filled": true,
-        "color": "#4C78A8"    
+function chartDims() {
+  const main   = document.getElementById('main');
+  const rect   = main.getBoundingClientRect();
+  const gap    = 8;
+  const pad    = 8;   // chart inner padding each side
+  const titleH = 20;  // .ct height approx
+  const w = Math.floor((rect.width  - gap) / 2) - pad * 2 - 2;
+  const h = Math.floor((rect.height - gap) / 2) - pad * 2 - titleH - 2;
+  return { w: Math.max(200, w), h: Math.max(150, h) };
+}
+
+let ALL_DATA = [];
+async function loadData() {
+  try {
+    const resp = await fetch('ucs_data.csv');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    ALL_DATA = parseCSV(await resp.text())
+      .filter(d => d['Current Official Name of Satellite']);
+    document.getElementById('loading').style.display = 'none';
+    renderAll();
+  } catch(e) {
+    const el = document.getElementById('lerr');
+    el.style.display = 'block';
+    el.textContent = 'Error: ' + e.message;
+  }
+}
+
+function getFilters() {
+  const g = id => document.getElementById(id);
+  return {
+    statusAll: g('st-all').checked, statusActive: g('st-active').checked, statusInactive: g('st-inactive').checked,
+    ugAll: g('ug-all').checked, ugCivil: g('ug-civil').checked, ugCommercial: g('ug-commercial').checked,
+    ugGovernment: g('ug-government').checked, ugMilitary: g('ug-military').checked,
+    massMin: +g('mass-min').value, massMax: +g('mass-max').value,
+    lifeMin: +g('life-min').value, lifeMax: +g('life-max').value,
+    perigeeMin: +g('perigee-min').value, perigeeMax: +g('perigee-max').value,
+    orbAll: g('orb-all').checked, orbElliptical: g('orb-elliptical').checked,
+    orbGeo: g('orb-geo').checked, orbLeo: g('orb-leo').checked, orbMeo: g('orb-meo').checked,
+  };
+}
+function applyFilters(data, f) {
+  return data.filter(d => {
+    const st = normStatus(d['Satellite Status']);
+    const us = normUsers(d['Users']);
+    const ob = String(d['Class of Orbit'] || '').trim().toUpperCase();
+    const ms = parseFloat(d['Launch Mass (kg.)'])        || 0;
+    const lf = parseFloat(d['Expected Lifetime (yrs.)']) || 0;
+    const pe = parseFloat(d['Perigee (km)'])             || 0;
+    if (!f.statusAll) {
+      if (st === 'Active'   && !f.statusActive)   return false;
+      if (st === 'Inactive' && !f.statusInactive) return false;
+    }
+    if (!f.ugAll) {
+      if (us === 'Civil'      && !f.ugCivil)      return false;
+      if (us === 'Commercial' && !f.ugCommercial) return false;
+      if (us === 'Government' && !f.ugGovernment) return false;
+      if (us === 'Military'   && !f.ugMilitary)   return false;
+    }
+    if (!f.orbAll) {
+      if (ob === 'ELLIPTICAL' && !f.orbElliptical) return false;
+      if (ob === 'GEO'        && !f.orbGeo)        return false;
+      if (ob === 'LEO'        && !f.orbLeo)        return false;
+      if (ob === 'MEO'        && !f.orbMeo)        return false;
+    }
+    if (ms > 0 && (ms < f.massMin    || ms > f.massMax))    return false;
+    if (lf > 0 && (lf < f.lifeMin    || lf > f.lifeMax))    return false;
+    if (pe > 0 && (pe < f.perigeeMin || pe > f.perigeeMax)) return false;
+    return true;
+  });
+}
+
+function specBar(data, w, h) {
+  return {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "data": { "values": data },
+    "width": 615, "height": 350,
+    "transform": [
+      { "filter": "datum['Satellite Status'] == 'Active' || datum['Satellite Status'] == 'Inactive' || datum['Satellite Status'] == 'Inactive (Archaeology)'" },
+      { "calculate": "datum['Satellite Status'] == 'Inactive (Archaeology)' ? 'Inactive' : datum['Satellite Status']", "as": "Status" },
+      { "aggregate": [{ "op": "count", "as": "count" }], "groupby": ["Country of Operator/Owner", "Status"] },
+      { "window": [{ "op": "sum", "field": "count", "as": "total" }], "groupby": ["Country of Operator/Owner"] },
+      { "filter": "datum.total > 5" },
+      { "window": [{ "op": "rank", "as": "rank" }], "sort": [{ "field": "total", "order": "descending" }] },
+      { "filter": "datum.rank <= 15" }
+    ],
+    "mark": "bar",
+    "encoding": {
+      "x": {
+        "field": "Country of Operator/Owner", "type": "nominal",
+        "sort": "y",
+        "title": "Country", "axis": { "labelAngle": -40, "labelFontSize": 10 }
       },
-      "encoding": {
-        "x": { 
-          "field": "Mass", 
-          "type": "quantitative", 
-          "scale": { 
-            "type": "linear", 
-            "domain": [0, 24000] 
+      "y": { "field": "count", "type": "quantitative", "title": "Satellite Count" },
+      "color": { "field": "Status", "type": "nominal",
+        "scale": { "domain": ["Active","Inactive"], "range": ["#4caf50","#f44336"] } },
+      "tooltip": [{ "field": "Country of Operator/Owner" }, { "field": "Status" }, { "field": "count", "title": "Count" }]
+    }
+  };
+}
+
+function specScatter(data, w, h) {
+  return {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "data": { "values": data },
+    "width": 615, "height": 350,
+    "transform": [
+      { "filter": "datum['Launch Mass (kg.)'] > 0 && datum['Expected Lifetime (yrs.)'] > 0" },
+      { "calculate": "toNumber(datum['Launch Mass (kg.)'])", "as": "Mass" },
+      { "calculate": "toNumber(datum['Expected Lifetime (yrs.)'])", "as": "Lifetime" }
+    ],
+    "layer": [
+      {
+        "mark": { "type": "point", "opacity": 0.5, "size": 30, "filled": true },
+        "encoding": {
+          "x": { "field": "Mass", "type": "quantitative", "scale": { "domain": [0,24000] }, "title": "Launch Mass (kg)", "axis": { "tickCount": 5, "grid": true } },
+          "y": { "field": "Lifetime", "type": "quantitative", "title": "Lifetime (yrs)", "scale": { "domain": [0,32] } },
+          "color": {
+            "field": "Risk Cluster", "type": "nominal",
+            "scale": { "domain": ["High Risk","Medium Risk","Low Risk"], "range": ["#0a1f6e","#4C78A8","#a8d4f5"] },
+            "legend": { "title": "Risk" }
           },
-          "title": "Launch Mass (kg)",
-          "axis": { "tickCount": 6, "grid": true }
-        },
-        "y": { 
-          "field": "Lifetime", 
-          "type": "quantitative", 
-          "title": "Expected Lifetime (yrs)",
-          "scale": { "domain": [0, 32] }
-        },
-        "xOffset": { "shorthand": "random()", "type": "quantitative" },
-        "yOffset": { "shorthand": "random()", "type": "quantitative" },
-        "tooltip": [
-          { "field": "Current Official Name of Satellite", "title": "Satellite" },
-          { "field": "Mass", "title": "Mass (kg)" },
-          { "field": "Lifetime", "title": "Lifetime (yrs)" }
-        ]
-      }
-    },
-    {
-      // KATMAN 2: REGRESYON ÇİZGİSİ
-      "mark": { "type": "line", "color": "#E15759", "size": 3 }, 
-      "transform": [
-        { "regression": "Lifetime", "on": "Mass" }
-      ],
-      "encoding": {
-        "x": { "field": "Mass", "type": "quantitative" },
-        "y": { "field": "Lifetime", "type": "quantitative" }
-      }
-    }
-  ],
-  "config": {
-    "view": { "stroke": "transparent" }
-  }
-};
-
-// ── HISTOGRAM (R3 Entry Point) ──────────────────────
-const histSpec = {
-  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-  "data": { "url": DATA_URL },
-  "width": 650,
-  "height": 280,
-  "mark": { "type": "bar", "color": "#4CC9F0" },
-  "encoding": {
-    "x": {
-      "field": "Perigee (km)",
-      "type": "quantitative",
-      "bin": {
-        "step": 1000,      
-        "extent": [500, 40000] 
+          "tooltip": [
+            { "field": "Current Official Name of Satellite", "title": "Satellite" },
+            { "field": "Mass", "title": "Mass (kg)" },
+            { "field": "Lifetime", "title": "Lifetime (yrs)" },
+            { "field": "Risk Cluster", "title": "Risk" }
+          ]
+        }
       },
-      "title": "Altitude (Perigee km)",
-      "axis": {
-        "values": [500, 5500, 10500, 15500, 20500, 25500, 30500, 35500] 
+      {
+        "mark": { "type": "line", "color": "#E15759", "size": 2 },
+        "transform": [{ "regression": "Lifetime", "on": "Mass" }],
+        "encoding": {
+          "x": { "field": "Mass", "type": "quantitative" },
+          "y": { "field": "Lifetime", "type": "quantitative" }
+        }
       }
-    },
-    "y": {
-      "aggregate": "count",
-      "type": "quantitative",
-      "title": "Satellite Count"
-    },
-    "tooltip": [
-      { "field": "Perigee (km)", "bin": true, "title": "Altitude Range" },
-      { "aggregate": "count", "title": "Count" }
-    ]
-  }
-};
+    ],
+    "config": { "view": { "stroke": "transparent" } }
+  };
+}
 
-// ── PIE CHART (R3 Supporting) ───────────────────────
-const pieSpec = {
-  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-  "data": { "url": DATA_URL },
-  "transform": [
-    {
-      "calculate": "indexof(['Civil', 'Military', 'Commercial', 'Government'], datum['Users']) >= 0 ? datum['Users'] : (indexof(datum['Users'], 'Military') >= 0 ? 'Military' : (indexof(datum['Users'], 'Commercial') >= 0 ? 'Commercial' : (indexof(datum['Users'], 'Civil') >= 0 ? 'Civil' : 'Government')))",
-      "as": "Users_group"
+function specHist(data, w, h) {
+  return {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "data": { "values": data },
+    "width": 660, "height": 375,
+    "mark": { "type": "bar", "color": "#4CC9F0" },
+    "encoding": {
+      "x": {
+        "field": "Perigee (km)", "type": "quantitative",
+        "bin": { "step": 1000, "extent": [500,40000] },
+        "title": "Altitude (Perigee km)",
+        "axis": { "values": [500,5500,10500,15500,20500,25500,30500,35500] }
+      },
+      "y": { "aggregate": "count", "type": "quantitative", "title": "Satellite Count" },
+      "tooltip": [{ "field": "Perigee (km)", "bin": true, "title": "Altitude Range" }, { "aggregate": "count", "title": "Count" }]
     }
-  ],
-  "mark": { "type": "arc", "innerRadius": 50 },
-  "encoding": {
-    "theta": { "aggregate": "count", "type": "quantitative" },
-    "color": { "field": "Users_group", "type": "nominal" },
-    "tooltip": [
-      { "field": "Users_group", "title": "Sector" },
-      { "aggregate": "count", "title": "Count" }
-    ]
-  },
-  "width": 600, "height": 400
-};
+  };
+}
 
-// Embed all
-vegaEmbed('#bar', barSpec, { theme: 'dark', actions: false });
-vegaEmbed('#scatter', scatterSpec, { theme: 'dark', actions: false });
-vegaEmbed('#hist', histSpec, { theme: 'dark', actions: false });
-vegaEmbed('#pie', pieSpec, { theme: 'dark', actions: false });
+function specPie(data, w, h) {
+  return {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "data": { "values": data },
+    "transform": [{
+      "calculate": "indexof(['Civil','Military','Commercial','Government'],datum['Users'])>=0?datum['Users']:(indexof(datum['Users'],'Military')>=0?'Military':(indexof(datum['Users'],'Commercial')>=0?'Commercial':(indexof(datum['Users'],'Civil')>=0?'Civil':'Government')))",
+      "as": "Users_group"
+    }],
+    "mark": { "type": "arc", "innerRadius": 40 },
+    "encoding": {
+      "theta": { "aggregate": "count", "type": "quantitative" },
+      "color": { "field": "Users_group", "type": "nominal" },
+      "tooltip": [{ "field": "Users_group", "title": "Sector" }, { "aggregate": "count", "title": "Count" }]
+    },
+    "width": 615, "height": 420,
+  };
+}
+
+let timer;
+function renderAll() {
+  clearTimeout(timer);
+  timer = setTimeout(() => {
+    const f    = getFilters();
+    const data = applyFilters(ALL_DATA, f);
+    const { w, h } = chartDims();
+    const opts = { theme: 'dark', actions: false };
+    vegaEmbed('#pie',     specPie(data, w, h),     opts).catch(console.error);
+    vegaEmbed('#bar',     specBar(data, w, h),     opts).catch(console.error);
+    vegaEmbed('#hist',    specHist(data, w, h),    opts).catch(console.error);
+    vegaEmbed('#scatter', specScatter(data, w, h), opts).catch(console.error);
+  }, 120);
+}
+
+function setupGroup(allId, kids) {
+  const a = document.getElementById(allId);
+  const cs = kids.map(id => document.getElementById(id));
+  a.addEventListener('change', () => { cs.forEach(c => c.checked = a.checked); renderAll(); });
+  cs.forEach(c => c.addEventListener('change', () => { a.checked = cs.every(x => x.checked); renderAll(); }));
+}
+setupGroup('st-all',  ['st-active','st-inactive']);
+setupGroup('ug-all',  ['ug-civil','ug-commercial','ug-government','ug-military']);
+setupGroup('orb-all', ['orb-elliptical','orb-geo','orb-leo','orb-meo']);
+
+function setupRange(minId, maxId, valId, fmt) {
+  const mn = document.getElementById(minId);
+  const mx = document.getElementById(maxId);
+  const vl = document.getElementById(valId);
+  function upd() {
+    let lo = parseFloat(mn.value), hi = parseFloat(mx.value);
+    if (lo > hi) { mn.value = hi; mx.value = lo; [lo, hi] = [hi, lo]; }
+    vl.textContent = fmt(lo) + ' - ' + fmt(hi);
+    renderAll();
+  }
+  mn.addEventListener('input', upd);
+  mx.addEventListener('input', upd);
+}
+setupRange('mass-min',    'mass-max',    'mass-val',    v => Math.round(v).toLocaleString());
+setupRange('life-min',    'life-max',    'life-val',    v => v.toFixed(2));
+setupRange('perigee-min', 'perigee-max', 'perigee-val', v => Math.round(v).toLocaleString());
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  ['st-all','st-active','st-inactive','ug-all','ug-civil','ug-commercial',
+   'ug-government','ug-military','orb-all','orb-elliptical','orb-geo','orb-leo','orb-meo']
+    .forEach(id => document.getElementById(id).checked = true);
+  document.getElementById('mass-min').value    = 1;
+  document.getElementById('mass-max').value    = 22500;
+  document.getElementById('life-min').value    = 0.25;
+  document.getElementById('life-max').value    = 30;
+  document.getElementById('perigee-min').value = 170;
+  document.getElementById('perigee-max').value = 37782;
+  document.getElementById('mass-val').textContent    = '1 - 22,500';
+  document.getElementById('life-val').textContent    = '0.25 - 30.00';
+  document.getElementById('perigee-val').textContent = '170 - 37,782';
+  renderAll();
+});
+
+window.addEventListener('resize', renderAll);
+loadData();
 </script>
 </body>
 </html>
