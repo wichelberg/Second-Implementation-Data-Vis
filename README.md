@@ -1,4 +1,4 @@
-Second Implementation exe can be installed from here -> [download](https://github.com/wichelberg/Second-Implementation-Data-Vis/releases/download/exe/2558396_SecondImplementation.zip)
+Second Implementation can be installed from here -> [download](https://github.com/wichelberg/Second-Implementation-Data-Vis/releases/download/exe/2558396_SecondImplementation.zip)
 
 Warning: The exe does not work on Mac software, so please do these steps to make it work:
 
