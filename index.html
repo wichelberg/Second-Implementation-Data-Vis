@@ -310,11 +310,17 @@ function applyFilters(data, f) {
   });
 }
 
+const screenW = window.innerWidth;
+const screenH = window.innerHeight;
+
+const dynamicWidth = screenW * 0.40;
+const dynamicHeight = screenH * 0.32;
+
 function specBar(data, w, h) {
   return {
     "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
     "data": { "values": data },
-    "width": 615, "height": 350,
+    "width": dynamicWidth, "height": dynamicHeight * (1.01),
     "transform": [
       { "filter": "datum['Satellite Status'] == 'Active' || datum['Satellite Status'] == 'Inactive' || datum['Satellite Status'] == 'Inactive (Archaeology)'" },
       { "calculate": "datum['Satellite Status'] == 'Inactive (Archaeology)' ? 'Inactive' : datum['Satellite Status']", "as": "Status" },
@@ -343,7 +349,7 @@ function specScatter(data, w, h) {
   return {
     "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
     "data": { "values": data },
-    "width": 615, "height": 350,
+    "width": dynamicWidth, "height": dynamicHeight,
     "transform": [
       { "filter": "datum['Launch Mass (kg.)'] > 0 && datum['Expected Lifetime (yrs.)'] > 0" },
       { "calculate": "toNumber(datum['Launch Mass (kg.)'])", "as": "Mass" },
@@ -353,7 +359,7 @@ function specScatter(data, w, h) {
       {
         "mark": { "type": "point", "opacity": 0.5, "size": 30, "filled": true },
         "encoding": {
-          "x": { "field": "Mass", "type": "quantitative", "scale": { "domain": [0,24000] }, "title": "Launch Mass (kg)", "axis": { "tickCount": 5, "grid": true } },
+          "x": { "field": "Mass", "type": "quantitative", "scale": { "domain": [0,20000] }, "title": "Launch Mass (kg)", "axis": { "tickCount": 5, "grid": true } },
           "y": { "field": "Lifetime", "type": "quantitative", "title": "Lifetime (yrs)", "scale": { "domain": [0,32] } },
           "color": {
             "field": "Risk Cluster", "type": "nominal",
@@ -385,7 +391,7 @@ function specHist(data, w, h) {
   return {
     "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
     "data": { "values": data },
-    "width": 660, "height": 375,
+    "width": dynamicWidth, "height": dynamicHeight * (1.06),
     "mark": { "type": "bar", "color": "#4CC9F0" },
     "encoding": {
       "x": {
@@ -414,7 +420,7 @@ function specPie(data, w, h) {
       "color": { "field": "Users_group", "type": "nominal" },
       "tooltip": [{ "field": "Users_group", "title": "Sector" }, { "aggregate": "count", "title": "Count" }]
     },
-    "width": 615, "height": 420,
+    "width": dynamicWidth * (1.1), "height": (dynamicHeight * 1.25),
   };
 }
 
